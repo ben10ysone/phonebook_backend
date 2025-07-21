@@ -1,13 +1,11 @@
 const express=require("express")
 const app = express()
 const morgan=require("morgan")
-const cors=require('cors')
 
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"];
 const days = ["Sun", "Mon", "Tues", "Wed", "Thur", "Fri", "Sat"];
 
-app.use(cors())
-
+app.use(express.static('dist'))
 app.use(morgan('tiny'))
 
 app.use(express.json())
