@@ -1,6 +1,8 @@
+require('dotenv').config()
 const express=require("express")
 const app = express()
 const morgan=require("morgan")
+const People=require('./models/people')
 
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"];
 const days = ["Sun", "Mon", "Tues", "Wed", "Thur", "Fri", "Sat"];
@@ -20,55 +22,36 @@ const requestLogger = (request, response, next) => {
 
 app.use(requestLogger)
 
-let persons=[
-    { 
-      "id": "1",
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": "2",
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": "3",
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": "4",
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-]
+let persons=[]
 
 app.get('/',(request,response)=>{
     response.send('<h1>This is root page</h1>')
 })
 
 app.get('/api/persons',(request,response)=>{
+  People.find({}).then(persons=>{
     response.json(persons)
+  })  
 })
 
 app.get('/info', (request, response)=>{
+  People.find({}).then(persons=>{
     const date= new Date()
     response.send( 
         `<div>
         <p> Phonebook has info for ${persons.length} people</p>
         <p> ${date}</p>
         </div>`)
+  })
 })
 
 app.get('/api/persons/:id',(request,response)=>{
-    const id=request.params.id
-    const person=persons.find(person => person.id===id)
-    if(person){
-        response.json(person)
-    }
-    else{
-        response.status(404).end()
-    }
+    People.findById(request.params.id).then(person=>{
+      response.json(person)
+    })
+    .catch(error=>{
+      response.status(404).end()
+    })
 })
 
 app.delete('/api/persons/:id', (request, response) => {
@@ -76,11 +59,6 @@ app.delete('/api/persons/:id', (request, response) => {
   persons = persons.filter(person => person.id !== id)
   response.status(204).end()
 })
-
-const generateId=()=>{
-    const id=Math.floor(Math.random() * (1e5))
-    return String(id) 
-}
 
 app.post('/api/persons', (request, response)=>{
     const body=request.body
@@ -90,16 +68,17 @@ app.post('/api/persons', (request, response)=>{
     if(!body.number){
         return response.status(400).json({"error": "number is missing"})
     }
-    if(persons.some(person => person.name===body.name)){
-        return response.status(400).json({"error":`${body.name} already exists`})
-    }
-    const person={
-        "name": body.name,
-        "number": body.number,
-        "id":generateId()
-    }
-    persons=persons.concat(person)
-    response.json(persons)
+    const person=new People({
+      "name": body.name,
+      "number": body.number,
+    })
+    console.log(person)
+    // if(persons.some(person => person.name===body.name)){
+    //     return response.status(400).json({"error":`${body.name} already exists`})
+    // }
+    person.save().then(savedPerson=>{
+      response.json(savedPerson)
+    })
 })
 
 const unknownEndpoint = (request, response) => {
