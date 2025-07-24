@@ -31,7 +31,7 @@ app.get('/',(request,response)=>{
 app.get('/api/persons',(request,response)=>{
   People.find({}).then(persons=>{
     response.json(persons)
-  })  
+  })
 })
 
 app.get('/info', (request, response)=>{
@@ -45,19 +45,42 @@ app.get('/info', (request, response)=>{
   })
 })
 
-app.get('/api/persons/:id',(request,response)=>{
+app.get('/api/persons/:id',(request,response,next)=>{
     People.findById(request.params.id).then(person=>{
-      response.json(person)
+      if(person){
+        response.json(person)
+      } else{
+        response.status(404).end()
+      }
     })
     .catch(error=>{
-      response.status(404).end()
+      next(error)
     })
 })
 
-app.delete('/api/persons/:id', (request, response) => {
-  const id = request.params.id
-  persons = persons.filter(person => person.id !== id)
-  response.status(204).end()
+app.delete('/api/persons/:id', (request, response, next) => {
+  People.findByIdAndDelete(request.params.id)
+      .then(result => {
+        response.status(204).end()
+      })
+      .catch(error => next(error))
+})
+
+app.put('/api/persons/:id', (request, response, next)=>{
+  const {name,number}=request.body
+  People.findById(request.params.id).then(person=>{
+    if(!person){
+      return response.status(404).end()
+    }
+    console.log(person)
+    person.name=name
+    person.number=number
+
+    person.save().then((updatedNote) => {
+        response.json(updatedNote)
+      })
+  })
+  .catch(error=>next(error))
 })
 
 app.post('/api/persons', (request, response)=>{
@@ -87,6 +110,17 @@ const unknownEndpoint = (request, response) => {
 
 app.use(unknownEndpoint)
 
+const errorHandler = (error, request, response, next) => {
+  console.error(error.message)
+
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'malformatted id' })
+  } 
+
+  next(error)
+}
+
+app.use(errorHandler)
 
 const PORT=3001
 app.listen(PORT, ()=>{
